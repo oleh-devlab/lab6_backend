@@ -7,6 +7,7 @@ import swaggerUi from 'swagger-ui-express';
 import YAML from 'yaml';
 import { db, pgp } from './db.js';
 import { errorHandler, notFoundHandler } from './errors.js';
+import linksRouter from './routes/links.js';
 
 const app = express();
 const PORT = Number(process.env.NODE_DOCKER_PORT ?? 8080);
@@ -26,6 +27,8 @@ app.get('/health', async (req, res) => {
     res.status(503).json({ status: 'error', database: 'down' });
   }
 });
+
+app.use('/api/links', linksRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
