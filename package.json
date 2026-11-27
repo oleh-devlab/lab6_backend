@@ -1,0 +1,23 @@
+{
+  "name": "URL shortener",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/oleh-devlab/lab6_backend#readme",
+  "bugs": {
+    "url": "https://github.com/oleh-devlab/lab6_backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oleh-devlab/lab6_backend.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}
