@@ -1,0 +1,39 @@
+services:
+  server:
+    build:
+      context: .
+    env_file: ./.env
+    environment:
+      NODE_ENV: production
+    ports:
+      - 8080:${NODE_DOCKER_PORT}
+    depends_on:
+      db:
+        # Чекати, доки база реально прийматиме з'єднання.
+        condition: service_healthy
+
+  db:
+    image: postgres:17
+    restart: always
+    user: postgres
+    env_file: ./.env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      # Том зберігає дані бази між перезапусками.
+      - db-data:/var/lib/postgresql/data
+      # Скрипт виконується лише при першому створенні бази.
+      - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+    # Порт відкритий лише для інших контейнерів, назовні не публікується.
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
