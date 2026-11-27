@@ -39,5 +39,24 @@ docker compose down # дані зберігаються в томі db-data
 docker compose down --volumes # видалити також дані бази
 ```
 
-Скрипт `initdb.sql` виконується лише при першому створенні бази.
+Скрипт `db/initdb.sql` виконується лише при першому створенні бази.
 Після зміни таблиці в ньому потрібно `docker compose down --volumes`.
+
+## Структура
+
+```
+openapi.yaml               специфікація API (єдине джерело правди)
+test.txt                   curl-команди для перевірки всіх кодів стану
+db/initdb.sql              створення таблиці links
+src/
+  server.js                запуск сервера і коректна зупинка
+  app.js                   порядок middleware і маршрутів, /health
+  db.js                    підключення pg-promise
+  swagger.js               Swagger UI з openapi.yaml
+  errors.js                HttpError, обробники 404 і помилок
+  validation.js            перевірка тіла і параметрів запиту
+  middleware/logger.js     логування запитів
+  repositories/links.js    SQL-запити до таблиці links
+  routes/links.js          /api/links: обробники операцій
+  routes/redirect.js       /{code}: перехід і підрахунок
+```

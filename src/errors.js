@@ -14,6 +14,9 @@ export const badRequest = (message) =>
 export const notFound = (message) =>
   new HttpError(404, 'NOT_FOUND', message);
 
+export const conflict = (message) =>
+  new HttpError(409, 'ALIAS_TAKEN', message);
+
 // Реєструється після всіх маршрутів: сюди доходять запити,
 // для яких жоден маршрут не спрацював.
 export function notFoundHandler(req, res, next) {

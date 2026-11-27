@@ -25,7 +25,7 @@ services:
       # Том зберігає дані бази між перезапусками.
       - db-data:/var/lib/postgresql/data
       # Скрипт виконується лише при першому створенні бази.
-      - ./initdb.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/initdb.sql:/docker-entrypoint-initdb.d/init.sql
     # Порт відкритий лише для інших контейнерів, назовні не публікується.
     expose:
       - 5432

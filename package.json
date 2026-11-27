@@ -13,9 +13,9 @@
   "license": "ISC",
   "author": "",
   "type": "module",
-  "main": "main.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node main.js"
+    "start": "node src/server.js"
   },
   "dependencies": {
     "dotenv": "^18.0.10",

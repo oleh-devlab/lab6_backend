@@ -8,4 +8,4 @@
 **/compose.y*ml
 **/.dockerignore
 README.md
-initdb.sql
+db/
