@@ -1,0 +1,339 @@
+openapi: 3.1.0
+
+info:
+  title: URL Shortener API
+  version: 1.0.0
+  description: |
+    Сервіс скорочення посилань.
+
+    Керування посиланнями — ресурс `/api/links`. Перехід за коротким
+    посиланням — окремий шлях `/{code}` поза API, щоб коротка адреса
+    була якомога коротшою.
+
+    Шляхи `/api`, `/docs` і `/health` зарезервовані: такі коди не можна
+    використати як alias.
+  license:
+    name: ISC
+    identifier: ISC
+
+servers:
+  - url: http://localhost:8080
+    description: Локальний запуск через docker compose
+
+security: []
+
+tags:
+  - name: links
+    description: Керування короткими посиланнями
+  - name: redirect
+    description: Перехід за коротким посиланням
+  - name: health
+    description: Перевірка стану сервера та бази даних
+
+paths:
+  /api/links:
+    post:
+      tags: [links]
+      operationId: createLink
+      summary: Створити коротке посилання
+      description: |
+        Якщо `alias` не передано, сервіс генерує випадковий код із 7 символів.
+        Повторне скорочення тієї самої адреси створює нове посилання
+        з окремим кодом і лічильником.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkCreate'
+            examples:
+              generated:
+                summary: Код генерує сервіс
+                value:
+                  url: https://expressjs.com/en/5x/api.html
+              alias:
+                summary: Власний alias
+                value:
+                  url: https://expressjs.com/en/5x/api.html
+                  alias: express-api
+      responses:
+        '201':
+          description: Посилання створено
+          headers:
+            Location:
+              description: Адреса створеного ресурсу
+              schema:
+                type: string
+                example: /api/links/express-api
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Alias уже зайнятий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: ALIAS_TAKEN
+                message: Alias "express-api" is already taken
+
+    get:
+      tags: [links]
+      operationId: listLinks
+      summary: Отримати перелік посилань
+      description: Посилання впорядковані від найновішого до найстарішого.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Скільки посилань повернути
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          description: Скільки посилань пропустити від початку
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Перелік посилань (може бути порожнім)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Link'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/links/{code}:
+    parameters:
+      - $ref: '#/components/parameters/Code'
+
+    get:
+      tags: [links]
+      operationId: getLink
+      summary: Отримати інформацію про посилання
+      responses:
+        '200':
+          description: Посилання знайдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [links]
+      operationId: updateLink
+      summary: Змінити оригінальну адресу
+      description: |
+        Змінює лише цільову адресу. Код, дата створення і лічильник
+        переходів залишаються без змін.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkUpdate'
+      responses:
+        '200':
+          description: Адресу змінено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Link'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [links]
+      operationId: deleteLink
+      summary: Видалити посилання
+      responses:
+        '204':
+          description: Посилання видалено
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /{code}:
+    parameters:
+      - $ref: '#/components/parameters/Code'
+
+    get:
+      tags: [redirect]
+      operationId: followLink
+      summary: Перейти за коротким посиланням
+      description: |
+        Збільшує лічильник переходів і перенаправляє на оригінальну адресу.
+        Код 302 не кешується браузером, тому кожен перехід доходить до
+        сервера і рахується, а зміна адреси через PATCH діє одразу.
+
+        У Swagger UI браузер сам виконує перенаправлення, тож замість 302
+        може з'явитися помилка CORS. Відповідь 302 видно у виводі
+        `curl -i`.
+      responses:
+        '302':
+          description: Перенаправлення на оригінальну адресу
+          headers:
+            Location:
+              description: Оригінальна адреса
+              schema:
+                type: string
+                format: uri
+                example: https://expressjs.com/en/5x/api.html
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Перевірити стан сервера та бази даних
+      responses:
+        '200':
+          description: Сервер працює, база доступна
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+                database: up
+        '503':
+          description: Сервер працює, база недоступна
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: error
+                database: down
+
+components:
+  parameters:
+    Code:
+      name: code
+      in: path
+      required: true
+      description: Короткий код посилання
+      schema:
+        type: string
+        example: express-api
+
+  schemas:
+    LinkCreate:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          $ref: '#/components/schemas/TargetUrl'
+        alias:
+          type: string
+          description: |
+            Власний короткий код. Латинські літери, цифри, `-` і `_`,
+            від 3 до 32 символів. Не може бути `api`, `docs` або `health`.
+          pattern: '^[A-Za-z0-9_-]{3,32}$'
+          example: express-api
+
+    LinkUpdate:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          $ref: '#/components/schemas/TargetUrl'
+
+    TargetUrl:
+      type: string
+      format: uri
+      maxLength: 2048
+      pattern: '^https?://'
+      description: Абсолютна адреса зі схемою http або https
+      example: https://expressjs.com/en/5x/api.html
+
+    Link:
+      type: object
+      required: [code, url, shortUrl, createdAt, clicks]
+      properties:
+        code:
+          type: string
+          readOnly: true
+          example: express-api
+        url:
+          type: string
+          format: uri
+          example: https://expressjs.com/en/5x/api.html
+        shortUrl:
+          type: string
+          format: uri
+          readOnly: true
+          example: http://localhost:8080/express-api
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          example: '2026-11-27T14:30:00.000Z'
+        clicks:
+          type: integer
+          minimum: 0
+          readOnly: true
+          example: 0
+
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Машиночитаний код помилки
+          enum: [VALIDATION_ERROR, ALIAS_TAKEN, NOT_FOUND]
+        message:
+          type: string
+          description: Опис помилки для людини
+
+    Health:
+      type: object
+      required: [status, database]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        database:
+          type: string
+          enum: [up, down]
+
+  responses:
+    ValidationError:
+      description: Некоректні вхідні дані
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: VALIDATION_ERROR
+            message: Field "url" must be an absolute http or https URL
+
+    NotFound:
+      description: Посилання з таким кодом не існує
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: NOT_FOUND
+            message: Link "aB3xK9q" not found
