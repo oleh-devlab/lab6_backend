@@ -1,0 +1,122 @@
+# GET /health — 200 (база доступна)
+curl -X 'GET' \
+  'http://localhost:8080/health' \
+  -H 'accept: application/json'
+
+# POST /api/links — 201 (код генерує сервіс)
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://expressjs.com/en/5x/api.html"
+}'
+
+# POST /api/links — 201 (власний alias)
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://expressjs.com/en/5x/api.html",
+  "alias": "express-api"
+}'
+
+# POST /api/links — 409 (alias уже зайнятий)
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://nodejs.org/",
+  "alias": "express-api"
+}'
+
+# POST /api/links — 400 (не http/https-адреса)
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "javascript:alert(1)"
+}'
+
+# POST /api/links — 400 (зарезервований alias)
+curl -X 'POST' \
+  'http://localhost:8080/api/links' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://nodejs.org/",
+  "alias": "docs"
+}'
+
+# GET /api/links — 200
+curl -X 'GET' \
+  'http://localhost:8080/api/links?limit=20&offset=0' \
+  -H 'accept: application/json'
+
+# GET /api/links — 400 (limit поза межами)
+curl -X 'GET' \
+  'http://localhost:8080/api/links?limit=500&offset=0' \
+  -H 'accept: application/json'
+
+# GET /api/links/{code} — 200
+curl -X 'GET' \
+  'http://localhost:8080/api/links/express-api' \
+  -H 'accept: application/json'
+
+# GET /api/links/{code} — 404
+curl -X 'GET' \
+  'http://localhost:8080/api/links/missing' \
+  -H 'accept: application/json'
+
+# PATCH /api/links/{code} — 200
+curl -X 'PATCH' \
+  'http://localhost:8080/api/links/express-api' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://nodejs.org/"
+}'
+
+# PATCH /api/links/{code} — 400 (немає поля url)
+curl -X 'PATCH' \
+  'http://localhost:8080/api/links/express-api' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{}'
+
+# PATCH /api/links/{code} — 404
+curl -X 'PATCH' \
+  'http://localhost:8080/api/links/missing' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "https://nodejs.org/"
+}'
+
+# GET /{code} — 302 (у Swagger UI видно помилку CORS; код і Location — з curl -i)
+curl -i -X 'GET' \
+  'http://localhost:8080/express-api' \
+  -H 'accept: */*'
+
+# GET /{code} — 404
+curl -X 'GET' \
+  'http://localhost:8080/missing' \
+  -H 'accept: */*'
+
+# DELETE /api/links/{code} — 204
+curl -X 'DELETE' \
+  'http://localhost:8080/api/links/express-api' \
+  -H 'accept: */*'
+
+# DELETE /api/links/{code} — 404
+curl -X 'DELETE' \
+  'http://localhost:8080/api/links/express-api' \
+  -H 'accept: */*'
+
+# GET /health — 503 (після docker compose stop db)
+curl -X 'GET' \
+  'http://localhost:8080/health' \
+  -H 'accept: application/json'
